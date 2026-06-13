@@ -18,33 +18,50 @@ export async function runGauntlet(ctx: ProbeContext): Promise<GauntletScorecard>
 
   console.log(`[gauntlet] Starting 7-probe certification for ${ctx.targetServiceId}`);
 
-  // CRITICAL: Reserve 45 seconds for PDF generation and final delivery
-  // to ensure Gauntlet never breaches its extended 10m (600,000ms) SLA.
-  const MAX_RUNTIME_MS = 555_000; 
-  const startTime = Date.now();
+  const GLOBAL_START_MS = Date.now();
+  // 5 Min SLA - 30s Buffer for PDF gen & upload = 270,000ms absolute execution budget
+  const EXECUTION_TIME_LIMIT_MS = 270_000;
 
   for (const probe of probes) {
-    // Global SLA Guard
-    if (Date.now() - startTime > MAX_RUNTIME_MS) {
-      console.warn(`[gauntlet] ⚠️ Aborting remaining probes to protect Gauntlet's SLA`);
-      results.push({ 
-        name: probe.name, 
-        passed: false, 
-        score: 0, 
-        durationMs: 0, 
-        error: 'Skipped due to SLA safety constraints (target tarpitted)' 
+    const elapsedMs = Date.now() - GLOBAL_START_MS;
+    
+    // SLA CASCADE DEFENSE: Short-circuit if remaining time is insufficient
+    if (elapsedMs >= EXECUTION_TIME_LIMIT_MS) {
+      console.warn(`[gauntlet] ⚠️ Global SLA limit approaching (${elapsedMs}ms). Aborting remaining probes.`);
+      results.push({
+        name: probe.name,
+        passed: false,
+        score: 0,
+        durationMs: 0,
+        error: `Aborted: Gauntlet global SLA protection engaged to guarantee scorecard delivery.`,
       });
       continue;
     }
 
-    // FIXED: String interpolation syntax
     console.log(`[gauntlet] Running probe: ${probe.name} (${probe.description})`);
-    const result = await probe.execute(ctx);
+    
+    const probeStartMs = Date.now();
+    let result: ProbeResult;
+
+    // ISOLATION: Prevent internal probe crashes from taking down the entire certification pipeline
+    try {
+      result = await probe.execute(ctx);
+    } catch (probeErr: unknown) {
+      console.error(`[gauntlet] Catastrophic internal failure in probe ${probe.name}:`, probeErr);
+      result = {
+        name: probe.name,
+        passed: false,
+        score: 0,
+        durationMs: Date.now() - probeStartMs,
+        error: `Internal probe execution crashed: ${String(probeErr).substring(0, 200)}`,
+      };
+    }
+
     results.push(result);
+    totalScore += result.score;
 
     if (result.passed) {
       passedCount++;
-      totalScore += result.score;
       console.log(`[gauntlet] ✅ PASS (${result.durationMs}ms): ${result.details || 'OK'}`);
     } else {
       console.log(`[gauntlet] ❌ FAIL (${result.durationMs}ms): ${result.error || 'Failed'}`);

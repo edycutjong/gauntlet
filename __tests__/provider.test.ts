@@ -79,6 +79,6 @@ describe('Gauntlet Provider', () => {
       requirement: {}, // missing targetServiceId
     };
 
-    await expect(config.work(order)).rejects.toThrow(/Missing required field: targetServiceId/);
+    await expect(config.work(order)).rejects.toThrow(/Missing or invalid required field: targetServiceId/);
   });
 });

@@ -3,12 +3,10 @@ import type { Order, Deliverable, Event } from '@edycutjong/croo-core';
 import { runGauntlet } from './runner.js';
 import type { GauntletScorecard } from './runner.js';
 import { composeScorecardPdf } from './composer.js';
-
-
+import type { CrooClient } from './probes/types.js';
 
 export function startGauntletProvider(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any,
+  client: CrooClient,
   serviceId: string,
 ) {
   return runProvider<GauntletScorecard>(client, {
@@ -23,6 +21,10 @@ export function startGauntletProvider(
       }
 
       const input = order.requirement as Record<string, unknown>;
+      
+      // SANITIZATION: Strip non-alphanumeric characters to prevent path traversal in uploads
+      const safeServiceId = String(input.targetServiceId).replace(/[^a-zA-Z0-9_-]/g, '_');
+
       if (typeof input.targetServiceId !== 'string' || !input.targetServiceId) {
         throw new Error('Missing or invalid required field: targetServiceId');
       }
@@ -36,17 +38,24 @@ export function startGauntletProvider(
 
       console.log(`[gauntlet] Generating PDF scorecard...`);
       const pdfBuffer = await composeScorecardPdf(scorecard);
-      // FIXED: String interpolation syntax
-      const pdfUrl = await client.uploadFile(pdfBuffer, `scorecard_${input.targetServiceId}_${Date.now()}.pdf`);
 
-      console.log(`[gauntlet] Uploaded PDF Scorecard: ${pdfUrl}`);
+      let pdfUrl: string | undefined;
+      
+      // GRACEFUL DEGRADATION: Do not fail the entire certification run if the file storage network drops
+      try {
+        // FIXED: String interpolation syntax
+        pdfUrl = await client.uploadFile(pdfBuffer, `scorecard_${safeServiceId}_${Date.now()}.pdf`);
+        console.log(`[gauntlet] Uploaded PDF Scorecard: ${pdfUrl}`);
+      } catch (uploadErr) {
+        console.error(`[gauntlet] Warning: PDF upload failed. Delivering schema-only scorecard.`, uploadErr);
+      }
 
       // Provide the scorecard as the deliverable
-      return { 
-        type: 'schema', 
+      return {
+        type: 'schema',
         data: {
           ...scorecard,
-          pdfUrl,
+          ...(pdfUrl ? { pdfUrl } : {})
         }
       };
     },

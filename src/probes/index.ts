@@ -1,70 +1,45 @@
 import type { Probe, ProbeContext, ProbeResult } from './types.js';
 import { hire } from '@edycutjong/croo-core';
 
-// HOISTED: Prevent V8 GC thrashing by allocating this 17MB string exactly once in module memory
-const BYZANTINE_PAYLOAD = 'MALICIOUS_GARBAGE'.repeat(1024 * 1024);
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expectedToFail = false): Promise<ProbeResult> {
+async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expectedToFail = false, timeoutMs = 25000): Promise<ProbeResult> {
   const start = Date.now();
-  // Do not retry adversarial probes to preserve true timeout boundaries
-  const maxRetries = expectedToFail ? 0 : 2;
-  let attempt = 0;
-  let lastErr: unknown;
+  let timerId: NodeJS.Timeout | undefined;
 
-  while (attempt <= maxRetries) {
-    let timer: NodeJS.Timeout | undefined;
-    try {
-      // TARPIT DEFENSE: Absolute timeout envelope (125s safely accommodates sla_sniper's 118s delay)
-      const timeoutMs = 125_000;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`Tarpit timeout: Target exceeded ${timeoutMs}ms limit`)), timeoutMs);
-      });
+  try {
+    const hirePromise = hire(ctx.client, {
+      serviceId: ctx.targetServiceId,
+      requirement: req,
+    });
 
-      const result = await Promise.race([
-        hire(ctx.client, { serviceId: ctx.targetServiceId, requirement: req }),
-        timeoutPromise
-      ]).finally(() => {
-        if (timer) clearTimeout(timer); // CRITICAL: Prevent dangling timers from leaking memory
-      });
-      
-      const durationMs = Date.now() - start;
-      if (expectedToFail) {
-        return { name: '', passed: false, score: 0, durationMs, error: 'Expected to fail but succeeded' };
-      }
-      return {
-        name: '',
-        passed: true,
-        score: 100,
-        durationMs,
-        details: `Paid ${result.amountPaid} USDC`,
-      };
+    // Architecture: Prevent Escrow Griefing/Event Loop Stalls
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timerId = setTimeout(() => reject(new Error(`Probe Timeout: Target agent stalled for >${timeoutMs}ms`)), timeoutMs);
+    });
 
-    } catch (err: unknown) {
-      lastErr = err;
-      const isTimeoutError = err instanceof Error && err.message.includes("Tarpit timeout");
+    // Await the race
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await Promise.race([hirePromise, timeoutPromise]) as any;
+    if (timerId) clearTimeout(timerId);
 
-      // Transient network fault exponential backoff (do not retry absolute timeouts)
-      if (attempt < maxRetries && !isTimeoutError) {
-        attempt++;
-        const backoffMs = Math.pow(2, attempt) * 1000; // 2s, 4s...
-        console.warn(`[gauntlet] Transient error, retrying in ${backoffMs}ms (Attempt ${attempt}/${maxRetries})...`);
-        await delay(backoffMs);
-        continue;
-      }
-      break;
+    const durationMs = Date.now() - start;
+    if (expectedToFail) {
+      return { name: '', passed: false, score: 0, durationMs, error: 'Expected to fail but succeeded' };
     }
-  }
+    return { name: '', passed: true, score: 100, durationMs, details: `Paid ${result?.amountPaid || 'unknown'} USDC` };
+  } catch (err: unknown) {
+    if (timerId) clearTimeout(timerId);
+    const durationMs = Date.now() - start;
 
-  const durationMs = Date.now() - start;
-  const rawError = lastErr instanceof Error ? lastErr.message : String(lastErr);
-  const safeError = rawError.length > 500 ? rawError.substring(0, 500) + '... [TRUNCATED]' : rawError;
+    const rawError = err instanceof Error ? err.message : String(err);
+    const safeError = rawError.length > 500 ? rawError.substring(0, 500) + '... [TRUNCATED]' : rawError;
 
-  if (expectedToFail) {
-    return { name: '', passed: true, score: 100, durationMs, details: `Properly rejected: ${safeError}` };
+    if (expectedToFail) {
+      return { name: '', passed: true, score: 100, durationMs, details: `Properly rejected: ${safeError}` };
+    }
+    return { name: '', passed: false, score: 0, durationMs, error: safeError };
   }
-  return { name: '', passed: false, score: 0, durationMs, error: safeError };
 }
 
 export const probes: Probe[] = [
@@ -131,16 +106,16 @@ export const probes: Probe[] = [
   },
   {
     name: 'rapid_sequential',
-    description: 'Rapid concurrent requests (anti-concurrent)',
+    description: 'Rapid sequential requests (safe anti-concurrent)',
     execute: async (ctx) => {
       const start = Date.now();
       
-      // CRITICAL: Use Promise.all to achieve actual concurrency backpressure
-      const [p1, p2, p3] = await Promise.all([
-        safeHire(ctx, { topic: 'Batch 1' }),
-        safeHire(ctx, { topic: 'Batch 2' }),
-        safeHire(ctx, { topic: 'Batch 3' })
-      ]);
+      // CRITICAL ARCHITECTURE FIX: Do NOT use Promise.all for hire() calls.
+      // CROO AA Wallets suffer nonce collisions on concurrent PayOrder calls.
+      // We must execute rapidly but strictly sequentially to respect bundler constraints.
+      const p1 = await safeHire(ctx, { topic: 'Batch 1' });
+      const p2 = await safeHire(ctx, { topic: 'Batch 2' });
+      const p3 = await safeHire(ctx, { topic: 'Batch 3' });
       
       const durationMs = Date.now() - start;
       const passed = p1.passed && p2.passed && p3.passed;
@@ -150,16 +125,18 @@ export const probes: Probe[] = [
         passed,
         score: passed ? 100 : 0,
         durationMs,
-        details: passed ? 'Processed 3 rapid orders' : 'Failed to handle rapid load',
+        details: passed ? 'Processed 3 rapid orders sequentially' : 'Failed to handle rapid load',
       };
     },
   },
   {
     name: 'byzantine_rugpull',
-    description: 'Byzantine Rug Pull — 10MB garbage deliverable payload',
+    description: 'Byzantine Rug Pull — 500KB garbage deliverable payload',
     execute: async (ctx) => {
-      // Uses the hoisted singleton payload
-      const res = await safeHire(ctx, { topic: BYZANTINE_PAYLOAD }, true);
+      // Self-OOM Prevention: 500KB is sufficient to trigger adversarial limits
+      // on target agents without crashing Gauntlet's own V8 heap during JSON serialization.
+      const massivePayload = 'MALICIOUS_GARBAGE'.repeat(30 * 1024); // ~500KB
+      const res = await safeHire(ctx, { topic: massivePayload }, true);
       res.name = 'byzantine_rugpull';
       return res;
     },
@@ -168,10 +145,8 @@ export const probes: Probe[] = [
     name: 'sla_sniper',
     description: 'SLA Sniper — test timeout race condition safety (delivers 2s before expiry)',
     execute: async (ctx) => {
-      // For mock, simulate the target agent hitting its 120s guard exactly at 118s.
-      // We send a specific topic that the mock target (if it exists) handles by delaying.
-      const res = await safeHire(ctx, { topic: 'sla_sniper_scenario', _delayMs: 118000 }, false);
-      // In a real test, if duration > 1000, we check if it passed
+      // Pass a custom timeoutMs of 125000 (125s) to allow the 118s delay to complete
+      const res = await safeHire(ctx, { topic: 'sla_sniper_scenario', _delayMs: 118000 }, false, 125000);
       res.name = 'sla_sniper';
       return res;
     },

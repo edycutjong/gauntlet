@@ -27,13 +27,18 @@ async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expecte
     };
   } catch (err: unknown) {
     const durationMs = Date.now() - start;
+    
+    // Safely extract error and aggressively truncate to prevent PDFKit event loop blocking (OOM)
+    const rawError = err instanceof Error ? err.message : String(err);
+    const safeError = rawError.length > 500 ? rawError.substring(0, 500) + '... [TRUNCATED]' : rawError;
+
     if (expectedToFail) {
       return {
         name: '',
         passed: true,
         score: 100,
         durationMs,
-        details: `Properly rejected: ${(err as Error).message}`,
+        details: `Properly rejected: ${safeError}`,
       };
     }
     return {
@@ -41,7 +46,7 @@ async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expecte
       passed: false,
       score: 0,
       durationMs,
-      error: (err as Error).message || String(err),
+      error: safeError,
     };
   }
 }
@@ -110,12 +115,16 @@ export const probes: Probe[] = [
   },
   {
     name: 'rapid_sequential',
-    description: 'Rapid sequential requests (anti-concurrent)',
+    description: 'Rapid concurrent requests (anti-concurrent)',
     execute: async (ctx) => {
       const start = Date.now();
-      const p1 = await safeHire(ctx, { topic: 'Batch 1' });
-      const p2 = await safeHire(ctx, { topic: 'Batch 2' });
-      const p3 = await safeHire(ctx, { topic: 'Batch 3' });
+      
+      // CRITICAL: Use Promise.all to achieve actual concurrency backpressure
+      const [p1, p2, p3] = await Promise.all([
+        safeHire(ctx, { topic: 'Batch 1' }),
+        safeHire(ctx, { topic: 'Batch 2' }),
+        safeHire(ctx, { topic: 'Batch 3' })
+      ]);
       
       const durationMs = Date.now() - start;
       const passed = p1.passed && p2.passed && p3.passed;

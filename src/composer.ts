@@ -9,6 +9,7 @@ export async function composeScorecardPdf(scorecard: GauntletScorecard): Promise
 
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', reject); // CRITICAL: Catch stream pipeline failures to prevent unhandled rejections
 
       doc.fontSize(24).fillColor('#06b6d4').text('CROO Gauntlet Scorecard', { align: 'center' });
       doc.moveDown();
@@ -24,7 +25,9 @@ export async function composeScorecardPdf(scorecard: GauntletScorecard): Promise
       doc.moveDown();
 
       for (const result of scorecard.results) {
-        doc.fontSize(14).text(`${result.name.toUpperCase()} - ${result.passed ? 'PASS' : 'FAIL'} (${result.durationMs}ms)`);
+        // FIXED: String interpolation syntax
+        const status = result.passed ? 'PASS' : 'FAIL';
+        doc.fontSize(14).text(`${result.name.toUpperCase()} - ${status} (${result.durationMs}ms)`);
         doc.fontSize(12).fillColor('#94a3b8');
         if (result.passed) {
           doc.text(`Details: ${result.details || 'OK'}`);

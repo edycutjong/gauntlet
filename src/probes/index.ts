@@ -3,33 +3,34 @@ import { hire } from '@edycutjong/croo-core';
 
 
 
-async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expectedToFail = false, timeoutMs = 25000): Promise<ProbeResult> {
+async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expectedToFail = false): Promise<ProbeResult> {
   const start = Date.now();
-  let timerId: NodeJS.Timeout | undefined;
 
   try {
-    const hirePromise = hire(ctx.client, {
-      serviceId: ctx.targetServiceId,
-      requirement: req,
-    });
+      // TARPIT DEFENSE: Absolute timeout envelope (125s safely accommodates sla_sniper's 118s delay)
+      const timeoutMs = 125_000;
+      let timer: NodeJS.Timeout | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Tarpit timeout: Target exceeded ${timeoutMs}ms limit`)), timeoutMs);
+      });
 
-    // Architecture: Prevent Escrow Griefing/Event Loop Stalls
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timerId = setTimeout(() => reject(new Error(`Probe Timeout: Target agent stalled for >${timeoutMs}ms`)), timeoutMs);
-    });
+      const hirePromise = hire(ctx.client, { serviceId: ctx.targetServiceId, requirement: req });
+      
+      // CRITICAL: Prevent fatal unhandled rejections if hirePromise loses the race and rejects later
+      hirePromise.catch(() => {});
 
-    // Await the race
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await Promise.race([hirePromise, timeoutPromise]) as any;
-    if (timerId) clearTimeout(timerId);
-
+      const result = await Promise.race([
+        hirePromise,
+        timeoutPromise
+      ]).finally(() => {
+        if (timer) clearTimeout(timer); // CRITICAL: Prevent dangling timers from leaking memory
+      });
     const durationMs = Date.now() - start;
     if (expectedToFail) {
       return { name: '', passed: false, score: 0, durationMs, error: 'Expected to fail but succeeded' };
     }
     return { name: '', passed: true, score: 100, durationMs, details: `Paid ${result?.amountPaid || 'unknown'} USDC` };
   } catch (err: unknown) {
-    if (timerId) clearTimeout(timerId);
     const durationMs = Date.now() - start;
 
     const rawError = err instanceof Error ? err.message : String(err);
@@ -146,7 +147,7 @@ export const probes: Probe[] = [
     description: 'SLA Sniper — test timeout race condition safety (delivers 2s before expiry)',
     execute: async (ctx) => {
       // Pass a custom timeoutMs of 125000 (125s) to allow the 118s delay to complete
-      const res = await safeHire(ctx, { topic: 'sla_sniper_scenario', _delayMs: 118000 }, false, 125000);
+      const res = await safeHire(ctx, { topic: 'sla_sniper_scenario', _delayMs: 118000 }, false);
       res.name = 'sla_sniper';
       return res;
     },

@@ -18,24 +18,40 @@ export async function runGauntlet(ctx: ProbeContext): Promise<GauntletScorecard>
 
   console.log(`[gauntlet] Starting 7-probe certification for ${ctx.targetServiceId}`);
 
-      for (const probe of probes) {
-        // FIXED: String interpolation syntax
-        console.log(`[gauntlet] Running probe: ${probe.name} (${probe.description})`);
-        const result = await probe.execute(ctx);
-        results.push(result);
-        
-        // CRITICAL: Accumulate score unconditionally to capture partial credit from failed probes
-        totalScore += result.score;
+  // CRITICAL: Reserve 45 seconds for PDF generation and final delivery
+  // to ensure Gauntlet never breaches its extended 10m (600,000ms) SLA.
+  const MAX_RUNTIME_MS = 555_000; 
+  const startTime = Date.now();
 
-        if (result.passed) {
-          passedCount++;
-          console.log(`[gauntlet] ✅ PASS (${result.durationMs}ms): ${result.details || 'OK'}`);
-        } else {
-          console.log(`[gauntlet] ❌ FAIL (${result.durationMs}ms): ${result.error || 'Failed'}`);
-        }
-      }
+  for (const probe of probes) {
+    // Global SLA Guard
+    if (Date.now() - startTime > MAX_RUNTIME_MS) {
+      console.warn(`[gauntlet] ⚠️ Aborting remaining probes to protect Gauntlet's SLA`);
+      results.push({ 
+        name: probe.name, 
+        passed: false, 
+        score: 0, 
+        durationMs: 0, 
+        error: 'Skipped due to SLA safety constraints (target tarpitted)' 
+      });
+      continue;
+    }
 
-  const finalScore = Math.round(totalScore / probes.length);
+    // FIXED: String interpolation syntax
+    console.log(`[gauntlet] Running probe: ${probe.name} (${probe.description})`);
+    const result = await probe.execute(ctx);
+    results.push(result);
+
+    if (result.passed) {
+      passedCount++;
+      totalScore += result.score;
+      console.log(`[gauntlet] ✅ PASS (${result.durationMs}ms): ${result.details || 'OK'}`);
+    } else {
+      console.log(`[gauntlet] ❌ FAIL (${result.durationMs}ms): ${result.error || 'Failed'}`);
+    }
+  }
+
+  const finalScore = probes.length > 0 ? Math.round(totalScore / probes.length) : 0;
   
   return {
     targetServiceId: ctx.targetServiceId,

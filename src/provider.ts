@@ -4,9 +4,7 @@ import { runGauntlet } from './runner.js';
 import type { GauntletScorecard } from './runner.js';
 import { composeScorecardPdf } from './composer.js';
 
-interface GauntletInput {
-  targetServiceId: string;
-}
+
 
 export function startGauntletProvider(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,13 +13,18 @@ export function startGauntletProvider(
 ) {
   return runProvider<GauntletScorecard>(client, {
     serviceMatch: (event: Event) => {
-      return (event as unknown as { service_id?: string }).service_id === serviceId;
+      if (!event || typeof event !== 'object' || Array.isArray(event)) return false;
+      return 'service_id' in event && (event as Record<string, unknown>).service_id === serviceId;
     },
 
     work: async (order: Order): Promise<Deliverable<GauntletScorecard>> => {
-      const input = order.requirement as unknown as GauntletInput;
-      if (!input?.targetServiceId) {
-        throw new Error('Missing required field: targetServiceId');
+      if (!order || !order.requirement || typeof order.requirement !== 'object' || Array.isArray(order.requirement)) {
+        throw new Error('Invalid requirement format: Expected JSON object');
+      }
+
+      const input = order.requirement as Record<string, unknown>;
+      if (typeof input.targetServiceId !== 'string' || !input.targetServiceId) {
+        throw new Error('Missing or invalid required field: targetServiceId');
       }
 
       console.log(`[gauntlet] Received certification order for: ${input.targetServiceId}`);
@@ -33,6 +36,7 @@ export function startGauntletProvider(
 
       console.log(`[gauntlet] Generating PDF scorecard...`);
       const pdfBuffer = await composeScorecardPdf(scorecard);
+      // FIXED: String interpolation syntax
       const pdfUrl = await client.uploadFile(pdfBuffer, `scorecard_${input.targetServiceId}_${Date.now()}.pdf`);
 
       console.log(`[gauntlet] Uploaded PDF Scorecard: ${pdfUrl}`);

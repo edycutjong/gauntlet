@@ -52,30 +52,38 @@ export function startGauntletProvider(
           throw new Error('Missing or invalid required field: targetServiceId');
         }
 
-        // Security: Sanitize target ID to prevent Path Traversal / Object Key Injection
-        const safeTargetId = input.targetServiceId.replace(/[^a-zA-Z0-9_-]/g, '_');
+        // P0 DEFENSE: Prevent Regex DoS and ENAMETOOLONG file-system overflows
+        if (input.targetServiceId.length > 128) {
+          throw new Error('Security Violation: targetServiceId exceeds maximum length of 128 characters.');
+        }
 
-        console.log(`[gauntlet] Received certification order for: ${safeTargetId}`);
+        const safeServiceId = input.targetServiceId.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        console.log(`[gauntlet] Received certification order for: ${input.targetServiceId}`);
 
         const scorecard = await runGauntlet({
           client,
-          targetServiceId: safeTargetId,
+          targetServiceId: input.targetServiceId,
         });
 
         console.log(`[gauntlet] Generating PDF scorecard...`);
         const pdfBuffer = await composeScorecardPdf(scorecard);
+        let pdfUrl: string | undefined;
 
-        // FIXED: String interpolation syntax
-        const pdfUrl = await client.uploadFile(pdfBuffer, `scorecard_${safeTargetId}_${Date.now()}.pdf`);
-
-        console.log(`[gauntlet] Uploaded PDF Scorecard: ${pdfUrl}`);
+        try {
+          // FIXED: String interpolation syntax
+          pdfUrl = await client.uploadFile(pdfBuffer, `scorecard_${safeServiceId}_${Date.now()}.pdf`);
+          console.log(`[gauntlet] Uploaded PDF Scorecard: ${pdfUrl}`);
+        } catch (uploadErr) {
+          console.error(`[gauntlet] Warning: PDF upload failed. Delivering schema-only scorecard.`, uploadErr);
+        }
 
         // Provide the scorecard as the deliverable
         return { 
           type: 'schema', 
           data: {
             ...scorecard,
-            pdfUrl,
+            ...(pdfUrl ? { pdfUrl } : {})
           }
         };
       } finally {

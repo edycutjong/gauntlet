@@ -1,10 +1,10 @@
 import PDFDocument from 'pdfkit';
 import type { GauntletScorecard } from './runner.js';
 
-// SANITIZATION: Strip non-WinAnsi characters to prevent PDFKit synchronous encoding crashes
+// SANITIZATION: Strip non-WinAnsi characters, but PRESERVE whitespace/newlines for readability
 const sanitizeForPdf = (str: string) => {
   if (!str) return '';
-  return str.replace(/[^\x20-\x7E]/g, '').trim();
+  return str.replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '').trim();
 };
 
 export async function composeScorecardPdf(scorecard: GauntletScorecard): Promise<Buffer> {

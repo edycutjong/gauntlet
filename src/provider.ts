@@ -3,10 +3,11 @@ import type { Order, Deliverable, Event } from '@edycutjong/croo-core';
 import { runGauntlet } from './runner.js';
 import type { GauntletScorecard } from './runner.js';
 import { composeScorecardPdf } from './composer.js';
-import type { CrooClient } from './probes/types.js';
+
 
 export function startGauntletProvider(
-  client: CrooClient,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any,
   serviceId: string,
 ) {
   return runProvider<GauntletScorecard>(client, {
@@ -21,46 +22,40 @@ export function startGauntletProvider(
       }
 
       const input = order.requirement as Record<string, unknown>;
-      
-      // SANITIZATION: Strip non-alphanumeric characters to prevent path traversal in uploads
-      const safeServiceId = String(input.targetServiceId).replace(/[^a-zA-Z0-9_-]/g, '_');
-
       if (typeof input.targetServiceId !== 'string' || !input.targetServiceId) {
         throw new Error('Missing or invalid required field: targetServiceId');
       }
 
-      console.log(`[gauntlet] Received certification order for: ${input.targetServiceId}`);
+      // Security: Sanitize target ID to prevent Path Traversal / Object Key Injection
+      const safeTargetId = input.targetServiceId.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+      console.log(`[gauntlet] Received certification order for: ${safeTargetId}`);
 
       const scorecard = await runGauntlet({
         client,
-        targetServiceId: input.targetServiceId,
+        targetServiceId: safeTargetId,
       });
 
       console.log(`[gauntlet] Generating PDF scorecard...`);
       const pdfBuffer = await composeScorecardPdf(scorecard);
 
-      let pdfUrl: string | undefined;
-      
-      // GRACEFUL DEGRADATION: Do not fail the entire certification run if the file storage network drops
-      try {
-        // FIXED: String interpolation syntax
-        pdfUrl = await client.uploadFile(pdfBuffer, `scorecard_${safeServiceId}_${Date.now()}.pdf`);
-        console.log(`[gauntlet] Uploaded PDF Scorecard: ${pdfUrl}`);
-      } catch (uploadErr) {
-        console.error(`[gauntlet] Warning: PDF upload failed. Delivering schema-only scorecard.`, uploadErr);
-      }
+      // FIXED: String interpolation syntax
+      const pdfUrl = await client.uploadFile(pdfBuffer, `scorecard_${safeTargetId}_${Date.now()}.pdf`);
+
+      console.log(`[gauntlet] Uploaded PDF Scorecard: ${pdfUrl}`);
 
       // Provide the scorecard as the deliverable
-      return {
-        type: 'schema',
+      return { 
+        type: 'schema', 
         data: {
           ...scorecard,
-          ...(pdfUrl ? { pdfUrl } : {})
+          pdfUrl,
         }
       };
     },
 
-    // A full gauntlet run might take several minutes, use a 5m SLA guard
-    slaGuardMs: 300_000, 
+    // A full gauntlet run takes several minutes (sla_sniper alone is ~118s).
+    // Extended to 10m SLA guard to prevent self-abort.
+    slaGuardMs: 600_000, 
   });
 }

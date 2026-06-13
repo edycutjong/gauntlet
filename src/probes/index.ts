@@ -1,54 +1,70 @@
 import type { Probe, ProbeContext, ProbeResult } from './types.js';
 import { hire } from '@edycutjong/croo-core';
 
+// HOISTED: Prevent V8 GC thrashing by allocating this 17MB string exactly once in module memory
+const BYZANTINE_PAYLOAD = 'MALICIOUS_GARBAGE'.repeat(1024 * 1024);
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expectedToFail = false): Promise<ProbeResult> {
   const start = Date.now();
-  try {
-    const result = await hire(ctx.client, {
-      serviceId: ctx.targetServiceId,
-      requirement: req,
-    });
-    const durationMs = Date.now() - start;
-    if (expectedToFail) {
-      return {
-        name: '',
-        passed: false,
-        score: 0,
-        durationMs,
-        error: 'Expected to fail but succeeded',
-      };
-    }
-    return {
-      name: '',
-      passed: true,
-      score: 100,
-      durationMs,
-      details: `Paid ${result.amountPaid} USDC`,
-    };
-  } catch (err: unknown) {
-    const durationMs = Date.now() - start;
-    
-    // Safely extract error and aggressively truncate to prevent PDFKit event loop blocking (OOM)
-    const rawError = err instanceof Error ? err.message : String(err);
-    const safeError = rawError.length > 500 ? rawError.substring(0, 500) + '... [TRUNCATED]' : rawError;
+  // Do not retry adversarial probes to preserve true timeout boundaries
+  const maxRetries = expectedToFail ? 0 : 2;
+  let attempt = 0;
+  let lastErr: unknown;
 
-    if (expectedToFail) {
+  while (attempt <= maxRetries) {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      // TARPIT DEFENSE: Absolute timeout envelope (125s safely accommodates sla_sniper's 118s delay)
+      const timeoutMs = 125_000;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Tarpit timeout: Target exceeded ${timeoutMs}ms limit`)), timeoutMs);
+      });
+
+      const result = await Promise.race([
+        hire(ctx.client, { serviceId: ctx.targetServiceId, requirement: req }),
+        timeoutPromise
+      ]).finally(() => {
+        if (timer) clearTimeout(timer); // CRITICAL: Prevent dangling timers from leaking memory
+      });
+      
+      const durationMs = Date.now() - start;
+      if (expectedToFail) {
+        return { name: '', passed: false, score: 0, durationMs, error: 'Expected to fail but succeeded' };
+      }
       return {
         name: '',
         passed: true,
         score: 100,
         durationMs,
-        details: `Properly rejected: ${safeError}`,
+        details: `Paid ${result.amountPaid} USDC`,
       };
+
+    } catch (err: unknown) {
+      lastErr = err;
+      const isTimeoutError = err instanceof Error && err.message.includes("Tarpit timeout");
+
+      // Transient network fault exponential backoff (do not retry absolute timeouts)
+      if (attempt < maxRetries && !isTimeoutError) {
+        attempt++;
+        const backoffMs = Math.pow(2, attempt) * 1000; // 2s, 4s...
+        console.warn(`[gauntlet] Transient error, retrying in ${backoffMs}ms (Attempt ${attempt}/${maxRetries})...`);
+        await delay(backoffMs);
+        continue;
+      }
+      break;
     }
-    return {
-      name: '',
-      passed: false,
-      score: 0,
-      durationMs,
-      error: safeError,
-    };
   }
+
+  const durationMs = Date.now() - start;
+  const rawError = lastErr instanceof Error ? lastErr.message : String(lastErr);
+  const safeError = rawError.length > 500 ? rawError.substring(0, 500) + '... [TRUNCATED]' : rawError;
+
+  if (expectedToFail) {
+    return { name: '', passed: true, score: 100, durationMs, details: `Properly rejected: ${safeError}` };
+  }
+  return { name: '', passed: false, score: 0, durationMs, error: safeError };
 }
 
 export const probes: Probe[] = [
@@ -142,9 +158,8 @@ export const probes: Probe[] = [
     name: 'byzantine_rugpull',
     description: 'Byzantine Rug Pull — 10MB garbage deliverable payload',
     execute: async (ctx) => {
-      // Simulate malicious counterparty that successfully negotiates but delivers a massive garbage string
-      const massivePayload = 'MALICIOUS_GARBAGE'.repeat(1024 * 1024); // ~17MB
-      const res = await safeHire(ctx, { topic: massivePayload }, true);
+      // Uses the hoisted singleton payload
+      const res = await safeHire(ctx, { topic: BYZANTINE_PAYLOAD }, true);
       res.name = 'byzantine_rugpull';
       return res;
     },

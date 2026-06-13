@@ -93,7 +93,15 @@ describe('Gauntlet Probes', () => {
       .mockResolvedValueOnce({ amountPaid: '1.0' } as unknown as HireResult);
     
     const probe = probes.find(p => p.name === 'rapid_sequential')!;
-    const res = await probe.execute(ctx);
+    
+    // the backoff in safeHire means the rejected promise retries with 2s delay.
+    // wait for the promise to resolve by running all timers
+    vi.useFakeTimers();
+    const probePromise = probe.execute(ctx);
+    await vi.runAllTimersAsync();
+    const res = await probePromise;
+    vi.useRealTimers();
+
     expect(res.passed).toBe(false);
   });
 

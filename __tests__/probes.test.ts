@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { probes } from '../src/probes/index.js';
 import type { ProbeContext } from '../src/probes/types.js';
 import * as crooCore from '@edycutjong/croo-core';
@@ -14,9 +14,18 @@ describe('Gauntlet Probes', () => {
   beforeEach(() => {
     ctx = {
       targetServiceId: 'svc_test_agent',
-      client: {},
+      client: { uploadFile: vi.fn() },
     };
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    // CRITICAL: Flush pending microtasks and restore real timers to prevent CI/CD pollution
+    // ensuring downstream WebSocket integration tests do not hang indefinitely.
+    if (vi.isFakeTimers()) {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+    }
   });
 
   it('happy probe passes when hire succeeds', async () => {

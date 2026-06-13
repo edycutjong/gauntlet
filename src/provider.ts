@@ -3,6 +3,7 @@ import type { Order, Deliverable, Event } from '@edycutjong/croo-core';
 import { runGauntlet } from './runner.js';
 import type { GauntletScorecard } from './runner.js';
 import { composeScorecardPdf } from './composer.js';
+import { recordCertification } from './registry.js';
 
 // CONCURRENCY GUARD: Prevent OOM and event loop starvation under heavy load
 class Semaphore {
@@ -65,6 +66,9 @@ export function startGauntletProvider(
           client,
           targetServiceId: input.targetServiceId,
         });
+
+        // --- VIRAL BADGE HACK: Record the score in our spatial-bounded registry ---
+        recordCertification(safeServiceId, scorecard.totalScore, scorecard.passedCount);
 
         console.log(`[gauntlet] Generating PDF scorecard...`);
         const pdfBuffer = await composeScorecardPdf(scorecard);

@@ -12,26 +12,36 @@
  * - CROO_MOCK=true
  */
 
-import { isMockMode } from 'croo-core';
+import { isMockMode, makeClient } from '@edycutjong/croo-core';
+import { startGauntletProvider } from './provider.js';
+
+export * from './provider.js';
+export * from './runner.js';
+export * from './probes/index.js';
 
 async function main() {
   console.log('╔══════════════════════════════════════════╗');
   console.log('║  ⚔️  Gauntlet — Certification Agent       ║');
   console.log('║  7-probe adversarial testing              ║');
   console.log(`║  Mode: ${isMockMode() ? '🧪 MOCK' : '🔴 LIVE (Base Mainnet)'}              ║`);
-  console.log('║  Status: STUB — build in Phase 4          ║');
   console.log('╚══════════════════════════════════════════╝');
 
-  // TODO: Phase 4 implementation
-  // - Provider loop (accept "certify" orders)
-  // - 7 probes (happy, latency, malformed, oversized, empty, SLA, concurrent)
-  // - Observer (WS timings)
-  // - Scorecard PDF (pdfkit → uploadFile)
+  const sdkKey = process.env.CROO_SDK_KEY;
+  if (!sdkKey && !isMockMode()) {
+    throw new Error('CROO_SDK_KEY is required unless CROO_MOCK=true');
+  }
 
-  console.log('[gauntlet] Not yet implemented. See BUILD_PLAN.md Phase 4.');
+  const client = makeClient(sdkKey || 'croo_sk_mock_gauntlet');
+  const serviceId = process.env.GAUNTLET_SERVICE_ID ?? 'svc_gauntlet_certifier';
+
+  console.log(`[gauntlet] Starting provider on ${serviceId}...`);
+  await startGauntletProvider(client, serviceId);
 }
 
-main().catch((err) => {
-  console.error('[gauntlet] Fatal error:', err);
-  process.exit(1);
-});
+// Only auto-start if this file is run directly
+if (import.meta.url.endsWith(process.argv[1])) {
+  main().catch((err) => {
+    console.error('[gauntlet] Fatal error:', err);
+    process.exit(1);
+  });
+}

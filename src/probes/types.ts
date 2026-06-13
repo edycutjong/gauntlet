@@ -1,3 +1,9 @@
+// Define explicit contract for the client to eliminate loose 'any'
+export interface CrooClient {
+  uploadFile(buffer: Buffer, fileName: string): Promise<string>;
+  [key: string]: unknown; // Allow other core methods
+}
+
 export interface ProbeResult {
   name: string;
   passed: boolean;
@@ -9,8 +15,7 @@ export interface ProbeResult {
 
 export interface ProbeContext {
   targetServiceId: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any;
+  client: CrooClient;
 }
 
 export interface Probe {

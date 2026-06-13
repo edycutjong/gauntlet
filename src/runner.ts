@@ -18,19 +18,22 @@ export async function runGauntlet(ctx: ProbeContext): Promise<GauntletScorecard>
 
   console.log(`[gauntlet] Starting 7-probe certification for ${ctx.targetServiceId}`);
 
-  for (const probe of probes) {
-    console.log(`[gauntlet] Running probe: ${probe.name} (${probe.description})`);
-    const result = await probe.execute(ctx);
-    results.push(result);
+      for (const probe of probes) {
+        // FIXED: String interpolation syntax
+        console.log(`[gauntlet] Running probe: ${probe.name} (${probe.description})`);
+        const result = await probe.execute(ctx);
+        results.push(result);
+        
+        // CRITICAL: Accumulate score unconditionally to capture partial credit from failed probes
+        totalScore += result.score;
 
-    if (result.passed) {
-      passedCount++;
-      totalScore += result.score;
-      console.log(`[gauntlet] ✅ PASS (${result.durationMs}ms): ${result.details || 'OK'}`);
-    } else {
-      console.log(`[gauntlet] ❌ FAIL (${result.durationMs}ms): ${result.error || 'Failed'}`);
-    }
-  }
+        if (result.passed) {
+          passedCount++;
+          console.log(`[gauntlet] ✅ PASS (${result.durationMs}ms): ${result.details || 'OK'}`);
+        } else {
+          console.log(`[gauntlet] ❌ FAIL (${result.durationMs}ms): ${result.error || 'Failed'}`);
+        }
+      }
 
   const finalScore = Math.round(totalScore / probes.length);
   

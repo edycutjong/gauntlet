@@ -35,6 +35,20 @@ async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expecte
 
     const rawError = err instanceof Error ? err.message : String(err);
     const safeError = rawError.length > 500 ? rawError.substring(0, 500) + '... [TRUNCATED]' : rawError;
+    
+    const isTarpit = safeError.includes('Tarpit timeout');
+
+    // CRITICAL DOMAIN FIX: A Tarpit timeout is a hard protocol violation. 
+    // Hanging the connection is NEVER a "Properly rejected" state, even on adversarial probes.
+    if (isTarpit) {
+      return {
+        name: '',
+        passed: false,
+        score: 0,
+        durationMs,
+        error: `Fatal: Target agent failed to respond and triggered the Gauntlet Tarpit timeout.`,
+      };
+    }
 
     if (expectedToFail) {
       return { name: '', passed: true, score: 100, durationMs, details: `Properly rejected: ${safeError}` };

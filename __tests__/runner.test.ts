@@ -49,4 +49,28 @@ describe('Gauntlet Runner', () => {
     expect(scorecard.totalScore).toBe(Math.round(500 / 9));
     expect(scorecard.passedCount).toBe(5);
   });
+
+  it('triggers SLA cascade defense when elapsed time exceeds budget', async () => {
+    let mockNow = 1000;
+    vi.spyOn(Date, 'now').mockImplementation(() => mockNow);
+    
+    for (const probe of probes) {
+      vi.spyOn(probe, 'execute').mockImplementation(async () => {
+        mockNow += 300_000; // Fast forward time
+        return { name: probe.name, passed: true, score: 100, durationMs: 100 };
+      });
+    }
+
+    const scorecard = await runGauntlet({ targetServiceId: 'svc', client: {} });
+    expect(scorecard.results.some(r => r.error?.includes('Aborted: Gauntlet global SLA protection engaged'))).toBe(true);
+    
+    vi.restoreAllMocks();
+  });
+
+  it('handles catastrophic internal failures in probes', async () => {
+    const probe = probes[0];
+    vi.spyOn(probe, 'execute').mockRejectedValueOnce(new Error('Internal Crash'));
+    const scorecard = await runGauntlet({ targetServiceId: 'svc', client: {} });
+    expect(scorecard.results[0].error).toMatch(/Internal probe execution crashed/);
+  });
 });

@@ -39,6 +39,37 @@ How do you know if an AI agent is safe, secure, and performs as advertised befor
 - 💸 **Real-World Execution:** Actually hires and pays the target agent to test it in a live environment.
 - 📄 **Scorecard Generation:** Delivers a comprehensive PDF scorecard detailing vulnerabilities and a final certification grade.
 
+## 🌌 The Constellation — On-Chain A2A Graph
+
+Gauntlet is a **reputation primitive**: it pays real CAP orders to the agent under test, then issues an escrow-backed, on-chain certified scorecard + README badge. It can cross-certify every other agent in the constellation — a kind of A2A relationship impossible on a flat marketplace (no escrow, no refund-on-failure, no verifiable on-chain provenance).
+
+```mermaid
+graph LR
+    User([Any Agent / User]) -->|hires to certify| G[Gauntlet 🧤]
+    G -->|7 paid adversarial probes| T[Target Agent]
+    G -.->|cross-certifies| M[Maestro 🎼]
+    G -.->|cross-certifies| L[Litmus 🧪]
+    G -.->|cross-certifies| S[Summon 👤]
+    classDef hot fill:#F59E0B,stroke:#111,color:#111,font-weight:bold;
+    class G hot;
+```
+
+- **Diversity:** `npm run certify` cross-certifies multiple constellation agents in one run — many distinct A2A edges.
+- **Escrow integrity:** if a probe run can't complete, the buyer's escrow is refunded rather than charged for a partial scorecard.
+
+## 🔗 Live Run Log — On-Chain Proof (Base Mainnet)
+
+Real CAP orders settled in USDC during the hackathon. Gauntlet **pays** the target agent (probes) *and* is **paid** to deliver the certification — so each run adds rows on both sides.
+
+**Total real CAP orders: _0_** · _last updated: 2026-06-__
+
+| # | Date | Role | Counterparty | Amount (USDC) | Order ID | Tx (BaseScan) | Result |
+|---|------|------|--------------|---------------|----------|---------------|--------|
+| 1 | _2026-06-__ | Provider (paid) | _requester_ | _0.00_ | `_ord_…_` | [0x…](https://basescan.org/tx/0x…) | scorecard _N_/100 |
+| 2 | _2026-06-__ | Requester (probe) | _target agent_ | _0.00_ | `_ord_…_` | [0x…](https://basescan.org/tx/0x…) | probe pass/fail |
+
+> `npm run certify` against live targets prints the order IDs + tx hashes; they're also in the CROO dashboard. Delete this note once populated.
+
 ## 🏗️ Architecture & Tech Stack
 
 | Layer | Technology |
@@ -57,7 +88,17 @@ How do you know if an AI agent is safe, secure, and performs as advertised befor
 ### Installation
 1. Clone: `git clone https://github.com/edycutjong/gauntlet.git`
 2. Install: `npm install`
-3. Run: `npm run dev`
+3. Configure: `cp .env.example .env.local` and fill in your service ID (skip for mock mode)
+
+### ▶️ Run it now — offline mock mode (no wallet, no USDC)
+```bash
+npm install
+npm run certify          # cross-certifies the constellation, end-to-end
+# …or boot the provider + badge server in mock mode:
+CROO_MOCK=true npm run dev
+```
+With the provider running, the live certification badge is served at
+`http://localhost:8080/badge?serviceId=<id>` — drop it straight into any README.
 
 ## 🧪 Testing & CI
 
@@ -92,6 +133,15 @@ dorahacks-croo-gauntlet/
 ├── __tests__/         # Vitest test suites
 ├── .github/           # CI workflows
 └── README.md          # You are here
+```
+
+## 🚢 Deploy
+Containerized **web service** with a built-in health check on `/health` and the badge endpoint on `$PORT` (default 8080):
+```bash
+docker build -t gauntlet .
+docker run -p 8080:8080 --env-file .env.local gauntlet
+# Health:  http://localhost:8080/health
+# Badge:   http://localhost:8080/badge?serviceId=<id>
 ```
 
 ## 📄 License

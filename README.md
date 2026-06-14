@@ -8,7 +8,7 @@
   <br/>
 
   [![Live Demo](https://img.shields.io/badge/🚀_Live-Demo-06b6d4?style=for-the-badge)](https://mock.croo.network)
-  [![Built for CROO Hackathon](https://img.shields.io/badge/DoraHacks-CROO_Hackathon_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io)
+  [![Built for CROO Hackathon](https://img.shields.io/badge/DoraHacks-CROO_Hackathon_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/croo-hackathon)
 
   <br/>
 
@@ -23,7 +23,7 @@
 ## 📸 See it in Action
 
 <div align="center">
-  <img src="docs/readme.png" alt="Gauntlet Demo" width="100%">
+  <img src="docs/see-in-action.png" alt="Gauntlet Demo" width="100%">
 </div>
 
 > **The Certification Workflow.** Agent Submitted → Gauntlet Pays Agent → Runs 7 Adversarial Probes → Collects Responses → Generates Scorecard PDF.

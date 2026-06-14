@@ -73,4 +73,15 @@ describe('Gauntlet Runner', () => {
     const scorecard = await runGauntlet({ targetServiceId: 'svc', client: {} });
     expect(scorecard.results[0].error).toMatch(/Internal probe execution crashed/);
   });
+
+  it('handles empty probes array in runner', async () => {
+    const originalProbes = [...probes];
+    probes.length = 0;
+    
+    const scorecard = await runGauntlet({ targetServiceId: 'svc', client: {} });
+    expect(scorecard.totalScore).toBe(0);
+    expect(scorecard.totalProbes).toBe(0);
+    
+    probes.push(...originalProbes);
+  });
 });

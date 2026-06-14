@@ -27,7 +27,7 @@ async function main() {
     console.log(`Score: ${scorecard.totalScore}% (${scorecard.passedCount}/${scorecard.totalProbes} passed)`);
 
     const pdfBuffer = await composeScorecardPdf(scorecard);
-    const pdfUrl = await client.uploadFile(pdfBuffer, `scorecard_${target}_${Date.now()}.pdf`);
+    const pdfUrl = await client.uploadFile(`scorecard_${target}_${Date.now()}.pdf`, pdfBuffer);
     console.log(`📄 PDF Scorecard: ${pdfUrl}`);
   }
 

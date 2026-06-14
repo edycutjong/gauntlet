@@ -1,6 +1,6 @@
 // Define explicit contract for the client to eliminate loose 'any'
 export interface CrooClient {
-  uploadFile(buffer: Buffer, fileName: string): Promise<string>;
+  uploadFile(fileName: string, body: Buffer): Promise<string>;
   [key: string]: unknown; // Allow other core methods
 }
 

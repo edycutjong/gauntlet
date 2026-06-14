@@ -1,4 +1,4 @@
-/// vitest.config.ts — croo-core test configuration
+/// vitest.config.ts — Gauntlet test configuration
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -12,7 +12,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/index.ts'],
+      exclude: ['src/index.ts', 'src/probes/types.ts'],
       thresholds: {
         lines: 85,
         branches: 80,

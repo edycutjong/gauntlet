@@ -1,15 +1,16 @@
 /**
- * Gauntlet — Entry point (stub).
+ * Gauntlet — Entry point.
  *
- * Gauntlet is deferred to Phase 4 (Days 19-23).
- * This is a placeholder that validates the project scaffolding.
+ * Starts the certification provider loop and an HTTP server that serves a
+ * health check and a dynamic certification badge (/badge?serviceId=...).
  *
  * Required env vars:
- * - CROO_SDK_KEY
- * - GAUNTLET_SERVICE_ID
+ * - CROO_SDK_KEY — required in LIVE mode (omit when CROO_MOCK=true)
+ * - GAUNTLET_SERVICE_ID — registered service ID
  *
  * Optional:
- * - CROO_MOCK=true
+ * - PORT — health/badge server port (default 8080)
+ * - CROO_MOCK=true — offline mock mode
  */
 
 import { isMockMode, makeClient } from '@edycutjong/croo-core';

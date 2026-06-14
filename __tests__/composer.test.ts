@@ -109,5 +109,18 @@ describe('Gauntlet Composer', () => {
     const pdfBuffer = await composeScorecardPdf(scorecard);
     expect(pdfBuffer).toBeInstanceOf(Buffer);
   });
+
+  it('handles empty strings and falsy values', async () => {
+    const scorecard: GauntletScorecard = {
+      targetServiceId: '', // Tests !str
+      timestamp: '2026',
+      passedCount: 0,
+      totalProbes: 1,
+      totalScore: 0,
+      results: [{ name: '', passed: false, durationMs: 0, score: 0 }], // Tests error || 'Failed' and !str
+    };
+    const pdfBuffer = await composeScorecardPdf(scorecard);
+    expect(pdfBuffer).toBeInstanceOf(Buffer);
+  });
 });
 

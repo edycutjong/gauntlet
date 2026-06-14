@@ -1,7 +1,7 @@
 <div align="center">
   <img src="docs/icon-animated.svg" alt="Gauntlet Logo" width="120">
 
-  <h1>Gauntlet 🛡️</h1>
+  <h1>Gauntlet 🧤</h1>
   <p><em>Paid certification agent — hires your agent with 7 adversarial probes and delivers a scorecard</em></p>
   <img src="docs/readme-hero-animated.svg" alt="Gauntlet" width="100%">
 

@@ -14,7 +14,8 @@ async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expecte
         timer = setTimeout(() => reject(new Error(`Tarpit timeout: Target exceeded ${timeoutMs}ms limit`)), timeoutMs);
       });
 
-      const hirePromise = hire(ctx.client, { serviceId: ctx.targetServiceId, requirement: req });
+      // ctx.client is a real SDK AgentClient at runtime; cast at the seam.
+      const hirePromise = hire(ctx.client as unknown as Parameters<typeof hire>[0], { serviceId: ctx.targetServiceId, requirement: req });
       
       // CRITICAL: Prevent fatal unhandled rejections if hirePromise loses the race and rejects later
       hirePromise.catch(() => {});
@@ -23,7 +24,7 @@ async function safeHire(ctx: ProbeContext, req: Record<string, unknown>, expecte
         hirePromise,
         timeoutPromise
       ]).finally(() => {
-        if (timer) clearTimeout(timer); // CRITICAL: Prevent dangling timers from leaking memory
+        clearTimeout(timer); // CRITICAL: Prevent dangling timers from leaking memory
       });
     const durationMs = Date.now() - start;
     if (expectedToFail) {

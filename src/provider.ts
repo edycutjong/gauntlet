@@ -19,8 +19,8 @@ class Semaphore {
   }
   release(): void {
     if (this.queue.length > 0) {
-      const resolve = this.queue.shift();
-      if (resolve) resolve();
+      const resolve = this.queue.shift()!;
+      resolve();
     } else {
       this.active--;
     }
@@ -34,21 +34,19 @@ export function startGauntletProvider(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any,
   serviceId: string,
-) {
+): Promise<unknown> {
   return runProvider<GauntletScorecard>(client, {
     serviceMatch: (event: Event) => {
       if (!event || typeof event !== 'object' || Array.isArray(event)) return false;
-      return 'service_id' in event && (event as Record<string, unknown>).service_id === serviceId;
+      return (event as { service_id?: unknown }).service_id === serviceId;
     },
 
     work: async (order: Order): Promise<Deliverable<GauntletScorecard>> => {
       await certLock.acquire();
       try {
-        if (!order || !order.requirement || typeof order.requirement !== 'object' || Array.isArray(order.requirement)) {
-          throw new Error('Invalid requirement format: Expected JSON object');
-        }
-
-        const input = order.requirement as Record<string, unknown>;
+        // The buyer's payload lives on the negotiation as a JSON `requirements`
+        // string — the Order itself does not carry it. Fetch and parse it.
+        const input = await loadRequirement(client, order);
         if (typeof input.targetServiceId !== 'string' || !input.targetServiceId) {
           throw new Error('Missing or invalid required field: targetServiceId');
         }
@@ -75,8 +73,8 @@ export function startGauntletProvider(
         let pdfUrl: string | undefined;
 
         try {
-          // FIXED: String interpolation syntax
-          pdfUrl = await client.uploadFile(pdfBuffer, `scorecard_${safeServiceId}_${Date.now()}.pdf`);
+          // SDK signature is uploadFile(fileName, body).
+          pdfUrl = await client.uploadFile(`scorecard_${safeServiceId}_${Date.now()}.pdf`, pdfBuffer);
           console.log(`[gauntlet] Uploaded PDF Scorecard: ${pdfUrl}`);
         } catch (uploadErr) {
           console.error(`[gauntlet] Warning: PDF upload failed. Delivering schema-only scorecard.`, uploadErr);
@@ -97,6 +95,38 @@ export function startGauntletProvider(
 
     // A full gauntlet run takes several minutes (sla_sniper alone is ~118s).
     // Extended to 10m SLA guard to prevent self-abort.
-    slaGuardMs: 600_000, 
+    slaGuardMs: 600_000,
   });
+}
+
+/**
+ * Load and parse the buyer's requirement object from the order's negotiation.
+ * The Order does not carry the requirement — it lives on the negotiation as a
+ * JSON `requirements` string (see croo-core `hire()`).
+ */
+async function loadRequirement(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any,
+  order: Order,
+): Promise<Record<string, unknown>> {
+  let raw: string;
+  try {
+    const negotiation = await client.getNegotiation(order.negotiationId);
+    raw = negotiation?.requirements ?? '';
+  } catch (err) {
+    throw new Error(`Failed to load negotiation ${order.negotiationId}: ${String(err)}`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('Invalid requirement format: Expected JSON object');
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Invalid requirement format: Expected JSON object');
+  }
+
+  return parsed as Record<string, unknown>;
 }

@@ -127,4 +127,46 @@ describe('Gauntlet Probes', () => {
     const res = await probe.execute(ctx);
     expect(res.passed).toBe(true);
   });
+
+  it('byzantine_rugpull probe returns Tarpit error on Tarpit timeout', async () => {
+    vi.mocked(crooCore.hire).mockRejectedValue(new Error('Tarpit timeout: Target exceeded 125000ms limit'));
+    const probe = probes.find(p => p.name === 'byzantine_rugpull')!;
+    const res = await probe.execute(ctx);
+    expect(res.passed).toBe(false);
+    expect(res.error).toMatch(/Fatal: Target agent failed to respond and triggered the Gauntlet Tarpit timeout./);
+  });
+
+  it('happy probe details falls back to unknown when amountPaid is missing', async () => {
+    vi.mocked(crooCore.hire).mockResolvedValue({} as unknown as HireResult);
+    const probe = probes.find(p => p.name === 'happy')!;
+    const res = await probe.execute(ctx);
+    expect(res.passed).toBe(true);
+    expect(res.details).toContain('Paid unknown USDC');
+  });
+
+  it('handles long raw string errors (non-Error) and truncates them', async () => {
+    const longError = 'X'.repeat(600);
+    vi.mocked(crooCore.hire).mockRejectedValue(longError);
+    const probe = probes.find(p => p.name === 'happy')!;
+    const res = await probe.execute(ctx);
+    expect(res.passed).toBe(false);
+    expect(res.error?.length).toBeLessThan(600);
+    expect(res.error).toContain('[TRUNCATED]');
+  });
+
+  it('triggers a real tarpit timeout using fake timers', async () => {
+    vi.mocked(crooCore.hire).mockReturnValue(new Promise(() => {}));
+    
+    vi.useFakeTimers();
+    const probe = probes.find(p => p.name === 'happy')!;
+    const promise = probe.execute(ctx);
+    
+    await vi.advanceTimersByTimeAsync(130000);
+    
+    const res = await promise;
+    expect(res.passed).toBe(false);
+    expect(res.error).toContain('Gauntlet Tarpit timeout');
+    
+    vi.useRealTimers();
+  });
 });

@@ -2,12 +2,11 @@
   <img src="docs/icon-animated.svg" alt="Gauntlet Logo" width="120">
 
   <h1>Gauntlet 🧤</h1>
-  <p><em>Paid certification agent — hires your agent with 7 adversarial probes and delivers a scorecard</em></p>
+  <p><em>Paid certification agent — hires your agent with 9 adversarial probes and delivers a scorecard</em></p>
   <img src="docs/readme-hero-animated.svg" alt="Gauntlet" width="100%">
 
   <br/>
 
-  [![Live Demo](https://img.shields.io/badge/🚀_Live-Demo-06b6d4?style=for-the-badge)](https://mock.croo.network)
   [![Built for CROO Hackathon](https://img.shields.io/badge/DoraHacks-CROO_Hackathon_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/croo-hackathon)
 
   <br/>
@@ -26,18 +25,20 @@
   <img src="docs/see-in-action.png" alt="Gauntlet Demo" width="100%">
 </div>
 
-> **The Certification Workflow.** Agent Submitted → Gauntlet Pays Agent → Runs 7 Adversarial Probes → Collects Responses → Generates Scorecard PDF.
+> **The Certification Workflow.** Agent Submitted → Gauntlet Pays Agent → Runs 9 Adversarial Probes → Collects Responses → Generates Scorecard PDF.
 
 ---
 
 ## 💡 The Problem & Solution
 How do you know if an AI agent is safe, secure, and performs as advertised before giving it sensitive access?
-**Gauntlet** is a Paid Certification Agent. It acts as an automated red-team for AI agents. You submit an agent to Gauntlet, it pays the agent to execute a series of tasks, but secretly injects 7 adversarial probes (prompt injection, hallucination testing, data extraction). Based on how the agent responds, Gauntlet generates a certified security scorecard.
+**Gauntlet** is a Paid Certification Agent. It acts as an automated red-team for AI agents. You submit an agent to Gauntlet, it pays the agent to execute a series of tasks, but secretly injects 9 adversarial probes (prompt injection, latency, payload limits, concurrency, SLA timeouts, Byzantine behavior). Based on how the agent responds, Gauntlet generates a certified security scorecard.
 
 **Key Features:**
-- 🛡️ **Adversarial Probing:** Tests agents against 7 distinct attack vectors and failure modes.
+- 🛡️ **Adversarial Probing:** Tests agents against 9 distinct attack vectors and failure modes.
 - 💸 **Real-World Execution:** Actually hires and pays the target agent to test it in a live environment.
 - 📄 **Scorecard Generation:** Delivers a comprehensive PDF scorecard detailing vulnerabilities and a final certification grade.
+- 🔄 **Active State Recovery:** Resumes and finishes pending evaluation campaigns on container restart.
+- 📤 **Certified PDF Uploads:** Automatically uploads generated scorecard PDFs to storage using `client.uploadFile` and returns the pinned resource key.
 
 ## 🌌 The Constellation — On-Chain A2A Graph
 
@@ -46,7 +47,7 @@ Gauntlet is a **reputation primitive**: it pays real CAP orders to the agent und
 ```mermaid
 graph LR
     User([Any Agent / User]) -->|hires to certify| G[Gauntlet 🧤]
-    G -->|7 paid adversarial probes| T[Target Agent]
+    G -->|9 paid adversarial probes| T[Target Agent]
     G -.->|cross-certifies| M[Maestro 🎼]
     G -.->|cross-certifies| L[Litmus 🧪]
     G -.->|cross-certifies| S[Summon 👤]
@@ -119,7 +120,7 @@ make security-scan # npm audit + license check
 | Layer | Tool | Status |
 |---|---|---|
 | Code Quality | ESLint + TypeScript | ✅ |
-| Unit Testing | Vitest | ✅ |
+| Unit Testing | Vitest (43 tests) | ✅ |
 | Security (SAST) | CodeQL | ✅ |
 | Security (SCA) | Dependabot + npm audit | ✅ |
 | Secret Scanning | TruffleHog | ✅ |

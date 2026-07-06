@@ -156,4 +156,18 @@ describe('Gauntlet Provider', () => {
     expect(config.serviceMatch([] as any)).toBe(false);
     expect(config.serviceMatch({} as any)).toBe(false);
   });
+
+  it('handles empty requirements field gracefully', async () => {
+    const client = {
+      getNegotiation: vi.fn().mockResolvedValue({
+        negotiationId: 'n1',
+        requirements: null,
+      }),
+      uploadFile: vi.fn(),
+    };
+    startGauntletProvider(client, 'svc_gauntlet');
+    const config = vi.mocked(crooCore.runProvider).mock.calls[0][1];
+
+    await expect(config.work(makeOrder())).rejects.toThrow('Invalid requirement format: Expected JSON object');
+  });
 });

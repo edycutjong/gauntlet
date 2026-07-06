@@ -36,6 +36,8 @@ export function startGauntletProvider(
   serviceId: string,
 ): Promise<unknown> {
   return runProvider<GauntletScorecard>(client, {
+    enableStateRecovery: true,
+    payoutAddress: process.env.GAUNTLET_PAYOUT_ADDRESS,
     serviceMatch: (event: Event) => {
       if (!event || typeof event !== 'object' || Array.isArray(event)) return false;
       return (event as { service_id?: unknown }).service_id === serviceId;

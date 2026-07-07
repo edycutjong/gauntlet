@@ -49,22 +49,26 @@ export function startGauntletProvider(
         // The buyer's payload lives on the negotiation as a JSON `requirements`
         // string — the Order itself does not carry it. Fetch and parse it.
         const input = await loadRequirement(client, order);
-        if (typeof input.targetServiceId !== 'string' || !input.targetServiceId) {
+        // Accept the CROO dashboard's free-text payload ({text}) as well as the
+        // structured {targetServiceId} / {serviceId} forms.
+        const rawTarget = input.targetServiceId ?? input.serviceId ?? input.text;
+        const targetServiceId = typeof rawTarget === 'string' ? rawTarget.trim() : '';
+        if (!targetServiceId) {
           throw new Error('Missing or invalid required field: targetServiceId');
         }
 
         // P0 DEFENSE: Prevent Regex DoS and ENAMETOOLONG file-system overflows
-        if (input.targetServiceId.length > 128) {
+        if (targetServiceId.length > 128) {
           throw new Error('Security Violation: targetServiceId exceeds maximum length of 128 characters.');
         }
 
-        const safeServiceId = input.targetServiceId.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const safeServiceId = targetServiceId.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-        console.log(`[gauntlet] Received certification order for: ${input.targetServiceId}`);
+        console.log(`[gauntlet] Received certification order for: ${targetServiceId}`);
 
         const scorecard = await runGauntlet({
           client,
-          targetServiceId: input.targetServiceId,
+          targetServiceId,
         });
 
         // --- VIRAL BADGE HACK: Record the score in our spatial-bounded registry ---

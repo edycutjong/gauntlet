@@ -1,3 +1,10 @@
+## [0.2.2](https://github.com/edycutjong/gauntlet/compare/v0.2.1...v0.2.2) (2026-07-07)
+
+
+### Bug Fixes
+
+* accept dashboard free-text requirement as targetServiceId (was requiring {targetServiceId}) ([3fcad06](https://github.com/edycutjong/gauntlet/commit/3fcad06e7f7d8873d0c852cd18aebb423df8bf9f))
+
 ## [0.2.1](https://github.com/edycutjong/gauntlet/compare/v0.2.0...v0.2.1) (2026-07-06)
 
 

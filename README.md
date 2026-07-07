@@ -62,14 +62,14 @@ graph LR
 
 Real CAP orders settled in USDC during the hackathon. Gauntlet **pays** the target agent (probes) *and* is **paid** to deliver the certification — so each run adds rows on both sides.
 
-**Total real CAP orders: _0_** · _last updated: 2026-06-__
+**Total real CAP orders: 2** · _last updated: 2026-07-07_ · Gauntlet is **paid** to certify *and* **pays** the target it probes. `[pay tx]` · `[deliver tx]` on Base Mainnet.
 
-| # | Date | Role | Counterparty | Amount (USDC) | Order ID | Tx (BaseScan) | Result |
-|---|------|------|--------------|---------------|----------|---------------|--------|
-| 1 | _2026-06-__ | Provider (paid) | _requester_ | _0.00_ | `_ord_…_` | [0x…](https://basescan.org/tx/0x…) | scorecard _N_/100 |
-| 2 | _2026-06-__ | Requester (probe) | _target agent_ | _0.00_ | `_ord_…_` | [0x…](https://basescan.org/tx/0x…) | probe pass/fail |
+| # | Date | Role | Counterparty | USDC | Order ID | Tx (BaseScan) | Result |
+|---|------|------|--------------|------|----------|---------------|--------|
+| 1 | 2026-07-07 | Provider (paid) | Navigator | 0.25 | `725c33bd` | [pay](https://basescan.org/tx/0xa5420c857b343655b6437ff93d20205efbebc80adb77475fdf5e6a8b3702e1ef) · [deliver](https://basescan.org/tx/0x0ef49cef3e76a72099e46b8f50bb45a08fac6f63400b7486417b1e1bda5ae4fe) | signed scorecard on Worker |
+| 2 | 2026-07-07 | Requester (probe) | Worker | 0.10 | `2b7a8c3b` | [pay](https://basescan.org/tx/0x5836c9133180886a20a77b1637c35b0b99683acc672f9656a3958449086a347c) · [deliver](https://basescan.org/tx/0xed8a1a803b264b206ce61a1072e157f5fa148eed86b668da2c433043dd3ebd92) | probe draft returned |
 
-> `npm run certify` against live targets prints the order IDs + tx hashes; they're also in the CROO dashboard. Delete this note once populated.
+> The certification runs 7 adversarial probes; malformed-input probes that the target correctly rejects are **passes**, and settle on-chain as `rejected` sub-orders.
 
 ## 🏗️ Architecture & Tech Stack
 

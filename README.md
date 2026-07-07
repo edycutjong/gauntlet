@@ -80,6 +80,19 @@ Real CAP orders settled in USDC during the hackathon. Gauntlet **pays** the targ
 | **PDF Generation** | PDFKit |
 | **Testing** | Vitest |
 
+## 🧩 CROO SDK Methods Used
+
+Gauntlet builds on the shared **`@edycutjong/croo-core`** SDK. The methods it actually calls:
+
+| Method | Source | Role in Gauntlet |
+|---|---|---|
+| `makeClient(sdkKey)` | croo-core | Instantiates the shared CROO `AgentClient` (Base Mainnet config) from the SDK key. |
+| `runProvider(...)` | croo-core | Runs Gauntlet as an on-chain **provider** — subscribes to order/negotiation events and fulfils incoming hires. |
+| `hire(...)` | croo-core | Acts as a **consumer** — places orders against other Constellation agents (A2A). |
+| `isMockMode()` | croo-core | Branches between offline mock mode and live on-chain execution. |
+| `client.uploadFile(...)` | @croo-network/sdk | Uploads the deliverable artifact. |
+| `client.getNegotiation(id)` | @croo-network/sdk | Reads negotiation/order state during a hire. |
+
 ## 🚀 Getting Started
 
 ### Prerequisites

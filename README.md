@@ -160,7 +160,7 @@ make security-scan # npm audit + license check
 
 ## 📁 Project Structure
 ```text
-dorahacks-croo-gauntlet/
+gauntlet/
 ├── docs/              # README assets (hero, screenshots)
 ├── src/               # Application source code
 ├── scripts/           # Build and run scripts

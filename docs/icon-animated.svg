@@ -15,7 +15,7 @@
 
   <!-- glow/pulse layer: position is a real attribute (renders without CSS); opacity breathes via SMIL -->
   <g transform="translate(52, 52) scale(17)" filter="url(#glow)" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.55">
-    <animate attributeName="opacity" values="0.4;0.8;0.4" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.28;0.95;0.28" dur="3s" repeatCount="indefinite"/>
       <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
       <path d="m9 12 2 2 4-4" />
   </g>
@@ -23,7 +23,7 @@
   <!-- main layer: base position via attribute; gentle float via additive SMIL -->
   <g transform="translate(52, 52)" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
     <animateTransform attributeName="transform" type="translate" additive="sum"
-      values="0 0; 0 -8; 0 0" keyTimes="0;0.5;1"
+      values="0 0; 0 -16; 0 0" keyTimes="0;0.5;1"
       dur="4s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
     <g transform="scale(17)">
       <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />

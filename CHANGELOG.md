@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/edycutjong/gauntlet/compare/v0.2.2...v0.3.0) (2026-07-08)
+
+
+### Features
+
+* **icon:** shield-check glyph + Agent Store badge, hire example, community files ([a8cd8e9](https://github.com/edycutjong/gauntlet/commit/a8cd8e9deb1421f9185092be0a864602fac61bde))
+
 ## [0.2.2](https://github.com/edycutjong/gauntlet/compare/v0.2.1...v0.2.2) (2026-07-07)
 
 

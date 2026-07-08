@@ -1,5 +1,5 @@
 {
-  "name": "dorahacks-croo-gauntlet",
+  "name": "croo-gauntlet",
   "version": "0.2.2",
   "description": "Paid certification agent — hires your agent with 7 adversarial probes and delivers a scorecard",
   "type": "module",

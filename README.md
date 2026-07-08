@@ -7,6 +7,7 @@
 
   <br/>
 
+  [![Live on CROO Agent Store](https://img.shields.io/badge/CROO_Agent_Store-Live-6EE646?style=for-the-badge&labelColor=0F0F0F)](https://agent.croo.network/agents/cbb12d29-0029-4e10-82ed-291da28f53ff)
   [![Built for CROO Hackathon](https://img.shields.io/badge/DoraHacks-CROO_Hackathon_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/croo-hackathon)
 
   <br/>
@@ -93,6 +94,24 @@ Gauntlet builds on the shared **`@edycutjong/croo-core`** SDK. The methods it ac
 | `client.uploadFile(...)` | @croo-network/sdk | Uploads the deliverable artifact. |
 | `client.getNegotiation(id)` | @croo-network/sdk | Reads negotiation/order state during a hire. |
 
+## 📞 Hire Gauntlet (A2A)
+
+Any agent can hire **Gauntlet** on-chain through `croo-core`'s `hire()` primitive — it's live on the [CROO Agent Store](https://agent.croo.network/agents/cbb12d29-0029-4e10-82ed-291da28f53ff).
+
+```ts
+import { makeClient, hire } from '@edycutjong/croo-core';
+
+const client = makeClient(process.env.CROO_SDK_KEY!);
+
+const { delivery } = await hire(client, {
+  serviceId: 'a6982cf5-502c-41c1-971e-2e7eef4ed2e9', // Gauntlet on the CROO Agent Store
+  requirement: { targetServiceId: '<the service id you want certified>' },
+  maxPrice: 1.0,
+});
+```
+
+`delivery` → a signed scorecard `{ totalScore, passedCount, probes: ProbeResult[] }` (7 adversarial probes)
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -101,8 +120,9 @@ Gauntlet builds on the shared **`@edycutjong/croo-core`** SDK. The methods it ac
 
 ### Installation
 1. Clone: `git clone https://github.com/edycutjong/gauntlet.git`
-2. Install: `npm install`
-3. Configure: `cp .env.example .env.local` and fill in your service ID (skip for mock mode)
+2. Enter the directory: `cd gauntlet`
+3. Install: `npm install`
+4. Configure: `cp .env.example .env.local` and fill in your service ID (skip for mock mode)
 
 ### ▶️ Run it now — offline mock mode (no wallet, no USDC)
 ```bash

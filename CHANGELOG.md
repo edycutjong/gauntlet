@@ -1,3 +1,10 @@
+## [0.3.2](https://github.com/edycutjong/gauntlet/compare/v0.3.1...v0.3.2) (2026-07-11)
+
+
+### Bug Fixes
+
+* **deps:** bump croo-core 0.4.0 -> 0.5.1 (fixes probe hire timeout) ([a127c33](https://github.com/edycutjong/gauntlet/commit/a127c33445c439a863449d1f64ccca99a3515f60))
+
 ## [0.3.1](https://github.com/edycutjong/gauntlet/compare/v0.3.0...v0.3.1) (2026-07-08)
 
 

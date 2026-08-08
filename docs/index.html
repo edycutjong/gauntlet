@@ -604,6 +604,10 @@
     if(m.x<-20) m.x=W+20; else if(m.x>W+20) m.x=-20;
     if(m.y<-20) m.y=H+20; else if(m.y>H+20) m.y=-20; } }
   function moteDraw(a){ for(var i=0;i<a.length;i++) dot(a[i].x,a[i].y,a[i].r,A,.16); }
+  /* Cyclic figures fade in before they act and out after they finish, so the
+     reset to fresh random values lands while the element is invisible.
+     Without this the loop visibly pops back to its opening state. */
+  function env(t){ return t<.12 ? ease(t/.12) : (t>.90 ? ease((1-t)/.10) : 1); }
 
   /* THE FIGURE ZONE. Copy in the hero is left-aligned inside a 1020px wrap, so
      the whitespace a figure may occupy is the right-hand third — a line drawn
@@ -620,17 +624,19 @@
   }
 
   function MOTIF(W,H){
-    var cx=FX, cy=FY, R=Math.min(FW,FH)*.30, mo=motes(9), pr=[], flash=0, i;
+    var cx=FX, cy=FY, R=Math.min(FW,FH)*.30, mo=motes(9), pr=[], rip=[], i;
     function mk(){ var a=rnd(0,6.283), d=R*rnd(3.4,4.6);
       return {a:a, x:cx+Math.cos(a)*d, y:cy+Math.sin(a)*d,
               t:0, dur:rnd(95,155), land:Math.random()<.28}; }
-    for(i=0;i<5;i++){ var p=mk(); p.t=Math.random(); pr.push(p); }
+    for(i=0;i<6;i++){ var p=mk(); p.t=Math.random(); pr.push(p); }
     return {
       step:function(k){
         moteStep(mo,k);
-        if(flash>0) flash=Math.max(0,flash-k/55);
-        for(var i=0;i<pr.length;i++){ var p=pr[i]; p.t+=k/p.dur;
-          if(p.t>=1){ if(p.land) flash=1; pr[i]=mk(); } }
+        /* one ripple PER hit, each on its own clock — landings that overlap
+           read as concentric waves instead of collapsing into a single ring */
+        for(var i=rip.length-1;i>=0;i--){ rip[i].t+=k/68; if(rip[i].t>=1) rip.splice(i,1); }
+        for(i=0;i<pr.length;i++){ var p=pr[i]; p.t+=k/p.dur;
+          if(p.t>=1){ if(p.land && rip.length<6) rip.push({t:0}); pr[i]=mk(); } }
       },
       draw:function(){
         moteDraw(mo);
@@ -647,7 +653,8 @@
           dot(x,y,1.6,p.land?G:A,.48);
           if(!p.land && p.t>span){ var f=1-(p.t-span)/(1-span);
             ring(ex,ey,2+(1-f)*10,A,f*.30); } }
-        if(flash>0) ring(cx,cy,R*.5+(1-flash)*R,G,flash*.30);
+        for(i=0;i<rip.length;i++){ var w=rip[i], fw=1-w.t;
+          ring(cx,cy,R*.42+w.t*R*1.25,G,fw*fw*.32); }
       }
     };
   }

@@ -72,7 +72,7 @@ Real CAP orders settled in USDC during the hackathon. Gauntlet **pays** the targ
 | 1 | 2026-07-07 | Provider (paid) | Navigator | 0.25 | `725c33bd` | [pay](https://basescan.org/tx/0xa5420c857b343655b6437ff93d20205efbebc80adb77475fdf5e6a8b3702e1ef) · [deliver](https://basescan.org/tx/0x0ef49cef3e76a72099e46b8f50bb45a08fac6f63400b7486417b1e1bda5ae4fe) | signed scorecard on Worker |
 | 2 | 2026-07-07 | Requester (probe) | Worker | 0.10 | `2b7a8c3b` | [pay](https://basescan.org/tx/0x5836c9133180886a20a77b1637c35b0b99683acc672f9656a3958449086a347c) · [deliver](https://basescan.org/tx/0xed8a1a803b264b206ce61a1072e157f5fa148eed86b668da2c433043dd3ebd92) | probe draft returned |
 
-> The certification runs 7 adversarial probes; malformed-input probes that the target correctly rejects are **passes**, and settle on-chain as `rejected` sub-orders.
+> The certification runs 9 adversarial probes (`src/probes/index.ts`): `happy`, `latency`, `malformed`, `oversized`, `empty`, `sla`, `rapid_sequential`, `byzantine_rugpull`, `sla_sniper`. Malformed-input probes that the target correctly rejects are **passes**, and settle on-chain as `rejected` sub-orders.
 
 ## 🏗️ Architecture & Tech Stack
 
@@ -112,7 +112,7 @@ const { delivery } = await hire(client, {
 });
 ```
 
-`delivery` → a signed scorecard `{ totalScore, passedCount, probes: ProbeResult[] }` (7 adversarial probes)
+`delivery` → a signed scorecard `{ totalScore, passedCount, probes: ProbeResult[] }` (9 adversarial probes)
 
 ## 🚀 Getting Started
 

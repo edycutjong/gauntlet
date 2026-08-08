@@ -8,7 +8,7 @@
   <br/>
 
   [![Live on CROO Agent Store](https://img.shields.io/badge/CROO_Agent_Store-Live-6EE646?style=for-the-badge&labelColor=0F0F0F)](https://agent.croo.network/agents/cbb12d29-0029-4e10-82ed-291da28f53ff)
-  [![Live Pitch Page](https://img.shields.io/badge/Live_Pitch-View-EC4899?style=for-the-badge&labelColor=0F0F0F)](https://edycutjong.github.io/gauntlet/)
+  [![Live Pitch Page](https://img.shields.io/badge/Live_Pitch-View-EC4899?style=for-the-badge&labelColor=0F0F0F)](https://gauntlet.croo.edycu.dev/)
   [![DoraHacks BUIDL](https://img.shields.io/badge/DoraHacks-BUIDL_%2347020-8b5cf6?style=for-the-badge&labelColor=0F0F0F)](https://dorahacks.io/buidl/47020)
 
   <br/>

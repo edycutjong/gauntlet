@@ -1,3 +1,10 @@
+## [0.3.3](https://github.com/edycutjong/gauntlet/compare/v0.3.2...v0.3.3) (2026-08-15)
+
+
+### Bug Fixes
+
+* **deps:** resolve 1 dependency vulnerabilities via lockfile ([203cb2c](https://github.com/edycutjong/gauntlet/commit/203cb2c90fe1fb7b895054a2d6084959a63067aa))
+
 ## [0.3.2](https://github.com/edycutjong/gauntlet/compare/v0.3.1...v0.3.2) (2026-07-11)
 
 

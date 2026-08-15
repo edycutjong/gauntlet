@@ -1,6 +1,6 @@
 {
   "name": "croo-gauntlet",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Paid certification agent — hires your agent with 7 adversarial probes and delivers a scorecard",
   "type": "module",
   "main": "dist/index.js",
